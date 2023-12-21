@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Participant>
+  <Participant Nom="Alexia">
+    <Année2019>Sylvie et Alexis</Année2019>
+    <Année2020>Thomas</Année2020>
+    <Année2021>Stéphane</Année2021>
+    <Année2022>Alexis</Année2022>
+  </Participant>
+  <Participant Nom="Benjamin">
+    <Année2019>Alexia</Année2019>
+    <Année2020>Sylvie et Alexis</Année2020>
+    <Année2021>Thomas</Année2021>
+    <Année2022>Stéphane</Année2022>
+  </Participant>
+  <Participant Nom="Thomas">
+    <Année2019>Stéphane</Année2019>
+    <Année2020>Stéphane</Année2020>
+    <Année2021>Sylvie et Alexis</Année2021>
+    <Année2022>Alexia</Année2022>
+  </Participant>
+  <Participant Nom="Stéphane">
+    <Année2019>Benjamin</Année2019>
+    <Année2020>Alexia</Année2020>
+    <Année2021>Benjamin</Année2021>
+    <Année2022>Thomas</Année2022>
+  </Participant>
+  <Participant Nom="Alexis">
+    <Année2019>Thomas</Année2019>
+    <Année2020>Benjamin</Année2020>
+    <Année2021>Alexia</Année2021>
+    <Année2022>Benjamin</Année2022>
+  </Participant>
+</Participant>
