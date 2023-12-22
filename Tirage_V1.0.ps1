@@ -30,20 +30,33 @@ catch {
 <Window 
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-        Title="MainWindow" Height="450" Width="485">
+        Title="MainWindow" Height="300" Width="485">
     <Grid Background="#FFC1C3CB">
-        <Button Name="Start" Content="Tirage au sort" HorizontalAlignment="Center" FontSize="20" FontWeight="Bold" FontFamily="Comic Sans MS" Margin="0,10,0,0" VerticalAlignment="Top" Width="174" Height="46" />
-        <GroupBox Header="Qui offre à qui?" FontSize="16" FontWeight="Bold" FontFamily="Comic Sans MS" BorderBrush="CornFlowerBlue" Margin="7,61,7,93">
-            <DataGrid Name="Grille_tirage" ItemsSource="{Binding}" Height="323">
+        <Button Name="Start" Content="Tirage au sort" HorizontalAlignment="Left" FontSize="20" FontWeight="Bold" FontFamily="Comic Sans MS" Margin="34,10,0,0" VerticalAlignment="Top" Width="174" Height="46" />
+        <Button Name="Accepter" Content="Tirage ok" HorizontalAlignment="Left" FontSize="20" FontWeight="Bold" FontFamily="Comic Sans MS" Margin="238,10,0,0" VerticalAlignment="Top" Width="174" Height="46" />
+        <GroupBox Header="Qui offre à qui?" FontSize="15" FontWeight="Bold" FontFamily="Comic Sans MS" BorderBrush="CornFlowerBlue" Margin="10,61,10,10">
+            <DataGrid SelectionMode="Single" Name="Grille_tirage" ItemsSource="{Binding}" Height="323">
                 <DataGrid.Columns >
                     <DataGridTextColumn Header="Participant" Binding="{Binding Participant}"/>
                     <DataGridTextColumn Header="L'Année Dernière" Binding="{Binding Année_prec}"/>
                     <DataGridTextColumn Header="Cette Année" Binding="{Binding Année_N}"/>
+                    <DataGridTextColumn Header="Tirage Valide" Binding="{Binding Valide}"/>
                 </DataGrid.Columns>
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="IsHitTestVisible" Value="True"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Valide}" Value="Pas Ok">
+                                <Setter Property="Background" Value="#E14D57"></Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Valide}" Value="Ok">
+                                <Setter Property="Background" Value="#71B37C"></Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
             </DataGrid>
         </GroupBox>
-        <Button Name="Accepter" Content="Tirage ok" HorizontalAlignment="Left" FontSize="20" FontWeight="Bold" FontFamily="Comic Sans MS" Margin="34,338,0,0" VerticalAlignment="Top" Width="174" Height="46" />
-        <Button Name="Relancer" Content="Relancer tirage" HorizontalAlignment="Left" FontSize="20" FontWeight="Bold" FontFamily="Comic Sans MS" Margin="263,338,0,0" VerticalAlignment="Top" Width="174" Height="46" />
     </Grid>
 </Window>
 "@
@@ -57,14 +70,12 @@ $Datagrid_tirage = $Window.FindName("Grille_tirage")
 $BTN_Start = $Window.FindName("Start")
 $BTN_Accepter = $Window.FindName("Accepter")
 $BTN_Accepter.IsEnabled=$false
-$BTN_Relancer = $Window.FindName("Relancer")
-$BTN_Relancer.IsEnabled=$false
 
 ## déclaration des variables
-$Historique_tirage = "C:\Users\maxime.tertrais\Desktop\historique_tirage.xml"
+$Historique_tirage = ".\historique_tirage.xml"
 $currentYear  =(Get-Date).Year
+$currentyearnode = "Année$($currentYear)"
 $previousYear = "Année$($currentYear - 1)"
-$Liste_participants = "Alexis","Benjamin","Thomas","Alexia","Stéphane"
 
 ## déclaration des fonctions
 function MàJ_grille_tirage {
@@ -72,6 +83,13 @@ function MàJ_grille_tirage {
     $tirage_Valeur = $tirage_Valeur | Add-Member NoteProperty Participant $tireur.Nom -passthru	
     $tirage_Valeur = $tirage_Valeur | Add-Member NoteProperty Année_prec $tireur.$previousYear -passthru
     $tirage_Valeur = $tirage_Valeur | Add-Member NoteProperty Année_N $tirage -passthru
+    #validation du tirage pour coloration lignes
+    if (($tirage -eq $tireur.Nom) -or ($tirage -eq $tireur.$previousYear)) {
+        $validation_tirage = "Pas Ok"
+    }else {
+        $validation_tirage = "Ok"
+    }
+    $tirage_Valeur = $tirage_Valeur | Add-Member NoteProperty Valide $validation_tirage -passthru
     $Window.Dispatcher.invoke([action]{
     $Datagrid_tirage.Items.Add($tirage_Valeur) > $null 
     })
@@ -80,29 +98,19 @@ function MàJ_grille_tirage {
 function MàJ_tirage_xml {
     foreach ($item in $Datagrid_tirage.Items) {
         $participant = $item.Participant
+        Write-Host $participant  
         $anneeN = $item.Année_N
+        Write-Host $anneeN 
         $historiqueXML = [xml](Get-Content $Historique_tirage)
-        # Trouver le participant dans le fichier XML
-        $NodeParticipant = $historiqueXML.SelectNodes("//Tireur/$participant")[0]
-        # Vérifier si le participant a été trouvée avant d'ajouter le tirage de l'année
-        if ($null -ne $NodeParticipant) 
-        {
-            # Créer un nouvel élément avec le tirage de l'année pour le participant
-            $newtirage = $historiqueXML.CreateElement("$currentYear")
-            $newtirage.InnerText = "$anneeN"
-            # Ajouter le résultat du tirage au participant
-            $NodeParticipant.AppendChild($newtirage)
-
+        # Créer un nouvel élément avec le tirage de l'année pour le participant
+        $newtirage=$historiqueXML.Tirage.$participant.AppendChild($historiqueXML.CreateElement($currentyearnode)) 
+        $newtirage_Value = $newtirage.AppendChild($historiqueXML.CreateTextNode($anneeN));
+        # Ajouter le résultat du tirage au participant
         $historiqueXML.Save($Historique_tirage)
-        [System.Windows.Forms.MessageBox]::Show("Tirage enregistré dans la liste.", 'Warning', 'ok', 'Warning')
-        } else {
-            [System.Windows.Forms.MessageBox]::Show("Participant $nom_participant non trouvée dans le fichier XML.")
-        }
     }
 }
 
 function tirage_au_sort {
-    $Historique_tirage = "C:\Users\maxime.tertrais\Desktop\historique_tirage.xml"
     $historiqueXML = [xml](get-content $Historique_tirage)
     #$Liste_participants = $historiqueXML.SelectNodes("//Participant/joueur").InnerText
     $Liste_participants = $historiqueXML.Tirage.Participant
@@ -119,43 +127,25 @@ function tirage_au_sort {
     {
         #Write-Host "tirage de: $participant"
         $tirage =""
-        $tirageAnneePrecedente = $tireur.$previousYear
-        $offrant = $tireur.Nom
-        do {
-            $tirage = Get-Random -InputObject $ParticipantsRestants
-        } while ($tirage -eq $offrant -or $tirage -eq $tirageAnneePrecedente)
-
-            #Write-Host "$offrant devra offrir un cadeau à $tirage"
-            $ParticipantsRestants = $ParticipantsRestants -ne $tirage
-            MàJ_grille_tirage 
+        $tirage = Get-Random -InputObject $ParticipantsRestants
+        #Write-Host "$offrant devra offrir un cadeau à $tirage"
+        $ParticipantsRestants = $ParticipantsRestants -ne $tirage
+        MàJ_grille_tirage 
     }
 }
+
 ################################################################################################################################################
 ################################################################################################################################################
 ########################################################## Lancement tirage au sort ############################################################ 
 ################################################################################################################################################
 ################################################################################################################################################
 $BTN_Start.add_click({
-    $BTN_Start.IsEnabled=$false
     $BTN_Accepter.IsEnabled=$true
-    $BTN_Relancer.IsEnabled=$true
-    tirage_au_sort
-})
-
-
-################################################################################################################################################
-################################################################################################################################################
-########################################################## Relancer tirage au sort ############################################################ 
-################################################################################################################################################
-################################################################################################################################################
-$BTN_Relancer.add_click({
-    $BTN_Start.IsEnabled=$false
-    $BTN_Accepter.IsEnabled=$true
-    $BTN_Relancer.IsEnabled=$true
     $Datagrid_tirage.Items.Clear()
     $Datagrid_tirage.Items.Refresh()
     tirage_au_sort
 })
+
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -163,12 +153,12 @@ $BTN_Relancer.add_click({
 ################################################################################################################################################
 ################################################################################################################################################
 $BTN_Accepter.add_click({
-    $BTN_Start.IsEnabled=$true
     $BTN_Accepter.IsEnabled=$false
-    $BTN_Relancer.IsEnabled=$false
     $Datagrid_tirage.Items.Clear()
     $Datagrid_tirage.Items.Refresh()
     MàJ_tirage_xml
 })
 
 $Window.ShowDialog() | Out-Null
+
+Read-Host -Prompt "Press Enter to exit"
